@@ -1,0 +1,820 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>AI 개인화 타로 리딩</title>
+
+    <!-- 한글 폰트: Pretendard(본문) + Cinzel/Nanum Myeongjo(제목) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Nanum+Myeongjo:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+    <style>
+        :root {
+            --bg-color: #0d0f17;
+            --card-bg: #1a1d2e;
+            --accent-color: #9d4edd;
+            --accent-glow: rgba(157, 78, 221, 0.4);
+            --text-primary: #f8f9fa;
+            --text-secondary: #a0a5b5;
+            --text-muted: #8b93a7;
+            --border-color: #2e344e;
+            --font-body: "Pretendard", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --font-heading: "Cinzel", "Nanum Myeongjo", serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-body);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        *:focus-visible {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 3px;
+            border-radius: 6px;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 430px;
+            height: 100vh;
+            height: 100dvh;
+            max-height: 932px;
+            background-color: var(--bg-color);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+        }
+
+        @media (min-width: 431px) {
+            .app-container {
+                height: 880px;
+                border-radius: 40px;
+                border: 8px solid #2d3142;
+            }
+        }
+
+        header {
+            /* 노치 등 상단 안전영역 확보 */
+            padding: max(20px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 10px max(24px, env(safe-area-inset-left));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .back-btn:active { background: rgba(255, 255, 255, 0.12); }
+        .back-btn[hidden] { display: none; }
+        .back-btn svg { width: 20px; height: 20px; }
+
+        .logo {
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #c77dff, #7b2cbf);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+
+        .step-indicator {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 12px;
+            border-radius: 12px;
+        }
+
+        main {
+            flex: 1;
+            position: relative;
+            overflow-y: auto;
+            /* 하단 홈 인디케이터 안전영역 확보 */
+            padding: 12px max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+        }
+
+        .step-view {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            animation: fadeIn 0.3s ease-in-out forwards;
+        }
+
+        .step-view.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .title-group {
+            margin-bottom: 20px;
+        }
+
+        .title-group h2 {
+            font-family: var(--font-heading);
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            line-height: 1.35;
+        }
+
+        .title-group p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .option-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .chip-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .chip-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 14px;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            font-family: var(--font-body);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip-btn:active { transform: scale(0.98); }
+
+        .chip-icon {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            color: var(--accent-color);
+        }
+
+        .chip-btn.selected {
+            border-color: var(--accent-color);
+            background: rgba(157, 78, 221, 0.15);
+            box-shadow: 0 0 12px var(--accent-glow);
+            font-weight: 600;
+        }
+
+        .deck-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .card-fan {
+            position: relative;
+            width: 100%;
+            max-width: 380px;
+            height: 210px;
+            margin: 0 auto;
+        }
+
+        .tarot-card-back {
+            width: 62px;
+            height: 104px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin: -52px 0 0 -31px;
+            padding: 0;
+            appearance: none;
+            -webkit-appearance: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2b1055, #7597de);
+            border: 2px solid #e0aaff;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s, filter 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .tarot-card-back:hover,
+        .tarot-card-back:focus-visible {
+            filter: brightness(1.18);
+            z-index: 500;
+        }
+
+        .tarot-card-back.picked {
+            border-color: #c77dff;
+            box-shadow: 0 0 22px var(--accent-glow);
+        }
+
+        .tarot-card-back .card-back-mark {
+            width: 22px;
+            height: 22px;
+        }
+
+        .result-card-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-image-wrapper {
+            position: relative;
+            width: 140px;
+            height: 245px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 0 20px var(--accent-glow);
+            transition: transform 0.4s ease;
+            background-color: var(--card-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-image-wrapper.reversed {
+            transform: rotate(180deg);
+        }
+
+        .card-image-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .card-fallback {
+            display: none;
+            padding: 12px;
+            text-align: center;
+            font-family: var(--font-heading);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: var(--text-secondary);
+        }
+        .card-image-wrapper.reversed .card-fallback {
+            transform: rotate(180deg);
+        }
+
+        .card-info {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .card-name {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .card-orientation {
+            font-size: 0.8rem;
+            color: #c77dff;
+            margin-top: 2px;
+        }
+
+        .img-attribution {
+            margin-top: 6px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.06);
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .reading-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 18px;
+            margin-bottom: 16px;
+            line-height: 1.6;
+            font-size: 0.92rem;
+        }
+
+        .reading-box .tone-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            color: var(--accent-color);
+            background: rgba(157, 78, 221, 0.1);
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .bottom-action {
+            margin-top: auto;
+            padding-top: 8px;
+        }
+
+        .primary-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #9d4edd, #7b2cbf);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: var(--font-body);
+            cursor: pointer;
+            box-shadow: 0 4px 15px var(--accent-glow);
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .primary-btn:active { transform: scale(0.99); }
+
+        .primary-btn:disabled {
+            background: #2e344e;
+            color: #6c757d;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .disclaimer {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 16px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 사용자가 '모션 최소화'를 선호하면 애니메이션 축소/비활성화 */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+                scroll-behavior: auto !important;
+            }
+            .step-view { animation: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <div class="header-left">
+            <button type="button" class="back-btn" id="backBtn" onclick="goBack()" aria-label="이전 단계로" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div class="logo">AURA TAROT</div>
+        </div>
+        <div class="step-indicator" id="stepIndicator">1/4</div>
+    </header>
+
+    <main>
+        <!-- STEP 1: 온보딩 -->
+        <section class="step-view active" id="step1">
+            <div class="title-group">
+                <h2>맞춤 리딩을 위한<br>프로필 설정</h2>
+                <p>연령대에 알맞은 어조와 해석 방식을 제공합니다.</p>
+            </div>
+
+            <div class="option-group">
+                <span class="option-label">연령대 선택</span>
+                <div class="chip-grid">
+                    <button type="button" class="chip-btn" onclick="selectAge('10-20s', this)">10대~20대 초반</button>
+                    <button type="button" class="chip-btn" onclick="selectAge('20-30s', this)">20대 후반~30대</button>
+                    <button type="button" class="chip-btn" onclick="selectAge('40-50s', this)">40대~50대</button>
+                    <button type="button" class="chip-btn" onclick="selectAge('60s+', this)">60대 이상</button>
+                </div>
+            </div>
+
+            <div class="bottom-action">
+                <button type="button" class="primary-btn" id="btnStep1" disabled onclick="nextStep(2)">다음</button>
+            </div>
+        </section>
+
+        <!-- STEP 2: 질문 카테고리 -->
+        <section class="step-view" id="step2">
+            <div class="title-group">
+                <h2>어떤 분야의 고민을<br>알아보고 싶으신가요?</h2>
+                <p>질문 맥락에 적합한 해석 엔진이 가동됩니다.</p>
+            </div>
+
+            <div class="option-group">
+                <div class="chip-grid" style="grid-template-columns: 1fr;">
+                    <button type="button" class="chip-btn" onclick="selectCategory('relationship', this)">
+                        <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.5 4.04 3 5.5l7 7Z"/></svg>
+                        연애 · 관계
+                    </button>
+                    <button type="button" class="chip-btn" onclick="selectCategory('career', this)">
+                        <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        커리어 · 의사결정
+                    </button>
+                    <button type="button" class="chip-btn" onclick="selectCategory('growth', this)">
+                        <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg>
+                        자기이해 · 성장
+                    </button>
+                    <button type="button" class="chip-btn" onclick="selectCategory('finance', this)">
+                        <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>
+                        재정 (상담 참고용)
+                    </button>
+                </div>
+            </div>
+
+            <div class="bottom-action">
+                <button type="button" class="primary-btn" id="btnStep2" disabled onclick="nextStep(3)">카드 선택하러 가기</button>
+            </div>
+        </section>
+
+        <!-- STEP 3: 카드 선택 -->
+        <section class="step-view" id="step3">
+            <div class="title-group" style="text-align: center;">
+                <h2>마음을 가다듬고<br>카드 1장을 선택하세요</h2>
+                <p>라이더-웨이트 메이저 아르카나 22장을 무작위로 섞어 펼쳤어요</p>
+            </div>
+
+            <div class="deck-container">
+                <div class="card-fan" id="cardDeck" role="group" aria-label="타로 카드 덱">
+                    <!-- JS 생성 -->
+                </div>
+            </div>
+
+            <div class="bottom-action">
+                <p class="disclaimer">22장 중 마음이 가는 1장을 고르세요. 고른 카드의 상징과 정/역방향이 해석에 반영됩니다.</p>
+            </div>
+        </section>
+
+        <!-- STEP 3.5: 해석 생성 로딩 -->
+        <section class="step-view" id="stepLoading">
+            <div class="loading-container">
+                <div class="spinner" role="status" aria-label="맞춤 해석 생성 중"></div>
+                <p style="font-weight: 500;">사용자 맥락 맞춤 해석 생성 중...</p>
+                <p style="font-size: 0.8rem; color: var(--text-secondary);">원전 도상 상징 분석 중</p>
+            </div>
+        </section>
+
+        <!-- STEP 4: 리딩 결과 화면 -->
+        <section class="step-view" id="step4">
+            <div class="result-card-display">
+                <div class="card-image-wrapper" id="cardImageWrapper">
+                    <img id="resultCardImg" src="" alt="" onerror="handleImageError(this)">
+                    <span class="card-fallback" id="cardFallback" aria-hidden="true"></span>
+                </div>
+                <div class="card-info">
+                    <span class="card-name" id="resultCardName">-</span>
+                    <span class="card-orientation" id="resultCardOrient">(정방향)</span>
+                </div>
+                <div class="img-attribution">
+                    Illustration by Pamela Colman Smith (1878–1951)
+                </div>
+            </div>
+
+            <div class="reading-box">
+                <span class="tone-badge" id="resultToneBadge">맞춤 톤 적용됨</span>
+                <p id="resultText"></p>
+            </div>
+
+            <div class="bottom-action">
+                <button type="button" class="primary-btn" onclick="restart()">다시 리딩하기</button>
+                <p class="disclaimer">본 리딩은 고전 타로 문헌에 기반한 참고용 콘텐츠이며, 전문적인 법률·의료·재정적 조언을 대체할 수 없습니다.</p>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- 카드 해석 DB를 별도 파일로 분리 (같은 폴더에 두 파일을 함께 두세요) -->
+<script src="tarot-data.js"></script>
+<script>
+    const state = {
+        ageGroup: null,
+        category: null,
+        selectedCard: null,
+        isReversed: false,
+        isProcessing: false,
+        currentView: 'step1',
+        spread: []
+    };
+
+    // 카드 뒷면 장식 마크(SVG)
+    const CARD_BACK_MARK = '<svg class="card-back-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M6 6l12 12M18 6 6 18"/></svg>';
+
+    // 받침 유무로 조사(을/를 등)를 선택 — 어조 없는 명사구를 자연스러운 문장에 끼우기 위함
+    function hasBatchim(str) {
+        if (!str) return false;
+        const c = str.charCodeAt(str.length - 1);
+        if (c < 0xAC00 || c > 0xD7A3) return false;
+        return (c - 0xAC00) % 28 !== 0;
+    }
+    function josa(word, withBatchim, withoutBatchim) {
+        return word + (hasBatchim(word) ? withBatchim : withoutBatchim);
+    }
+
+    // 여러 표현 중 하나를 랜덤 선택 (배열이면 무작위, 문자열이면 그대로 — 하위 호환)
+    function pickOne(v) {
+        if (Array.isArray(v)) return v[Math.floor(Math.random() * v.length)] || '';
+        return v || '';
+    }
+
+    // 뽑힌 카드(정/역방향) + 연령대 톤 + 고민 분야를 결합해 해석문 생성
+    //  - 해석부(head): 키워드/상징(명사구)을 연령대 말투의 '문장'으로 풀어서 설명
+    //  - 코칭부(coaching): 분야별 초점(focus) × 정/역방향 × 연령대 말투로 변주
+    function composeReading(card, isReversed, ageGroup, category) {
+        const deck = window.TAROT_DECK;
+        const tone = deck.tones[ageGroup] || deck.tones['20-30s'];
+        const ctx = deck.categories[category] || '당신의 고민';
+        const meaning = isReversed ? card.reversed : card.upright;
+        const orient = isReversed ? '역방향' : '정방향';
+        const displayName = card.name.replace(/^\d+\.\s*/, '');
+
+        // 분야별 코칭 초점 (정/역방향에 따라 달라짐)
+        const focusSet = (deck.focus && deck.focus[category]) || null;
+        const focus = focusSet ? (isReversed ? focusSet.down : focusSet.up)
+                               : '지금 할 수 있는 것에 차분히 집중하는 것';
+        const coaching = pickOne(isReversed ? tone.coachDown : tone.coachUp).replace('{focus}', focus);
+
+        // 키워드/상징을 조사와 함께 문장에 삽입 (을/를 자동 선택)
+        const head = tone.template
+            .replace('{ctx}', ctx)
+            .replace('{name}', displayName)
+            .replace('{orient}', orient)
+            .replace('{orientNote}', pickOne(isReversed ? tone.orientNoteDown : tone.orientNoteUp))
+            .replace('{meaningEul}', josa(meaning, '을', '를'))
+            .replace('{symbolEul}', josa(card.symbol, '을', '를'));
+
+        return { badge: tone.badge, text: head + ' ' + coaching };
+    }
+
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function handleImageError(img) {
+        img.style.display = 'none';
+        const fb = document.getElementById('cardFallback');
+        if (fb && state.selectedCard) {
+            fb.textContent = state.selectedCard.name;
+            fb.style.display = 'block';
+        }
+    }
+
+    function switchView(viewId) {
+        document.querySelectorAll('.step-view').forEach(el => el.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+    }
+
+    // 뒤로가기 내비게이션 — 브라우저 히스토리와 연동해 하드웨어 back 시 앱 이탈 방지
+    const stepIndicatorMap = { step1: '1', step2: '2', step3: '3', stepLoading: '3', step4: '4' };
+    let navStack = ['step1'];
+
+    function updateBackButton(viewId) {
+        document.getElementById('backBtn').hidden = !(viewId === 'step2' || viewId === 'step3');
+    }
+
+    function setView(viewId) {
+        if (viewId === 'step3') renderDeck();
+        switchView(viewId);
+        state.currentView = viewId;
+        document.getElementById('stepIndicator').innerText = `${stepIndicatorMap[viewId] || '1'}/4`;
+        updateBackButton(viewId);
+    }
+
+    function nextStep(stepNumber) {
+        const viewId = `step${stepNumber}`;
+        navStack.push(viewId);
+        history.pushState({ view: viewId }, '');
+        setView(viewId);
+    }
+
+    function goBack() {
+        history.back();
+    }
+
+    window.addEventListener('popstate', () => {
+        if (state.isProcessing) {
+            history.pushState({ view: state.currentView }, '');
+            return;
+        }
+        if (navStack.length > 1) navStack.pop();
+        setView(navStack[navStack.length - 1] || 'step1');
+    });
+
+    history.replaceState({ view: 'step1' }, '');
+
+    function selectAge(age, element) {
+        state.ageGroup = age;
+        element.parentElement.querySelectorAll('.chip-btn').forEach(btn => btn.classList.remove('selected'));
+        element.classList.add('selected');
+        document.getElementById('btnStep1').disabled = false;
+    }
+
+    function selectCategory(cat, element) {
+        state.category = cat;
+        element.parentElement.querySelectorAll('.chip-btn').forEach(btn => btn.classList.remove('selected'));
+        element.classList.add('selected');
+        document.getElementById('btnStep2').disabled = false;
+    }
+
+    // 덱을 섞어 22장을 뒤집어 부채꼴로 펼친다. 각 위치에 놓일 카드와 정/역방향은 셔플로 무작위 결정.
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        }
+        return arr;
+    }
+
+    function renderDeck() {
+        const deckContainer = document.getElementById('cardDeck');
+        deckContainer.innerHTML = '';
+        const total = (window.TAROT_DECK && window.TAROT_DECK.cards) ? window.TAROT_DECK.cards.length : 22;
+
+        // 카드 순서를 섞고, 각 위치의 정/역방향도 무작위로 배정
+        const order = shuffle(Array.from({ length: total }, (_, k) => k));
+        state.spread = order.map(function (cardIndex) {
+            return { cardIndex: cardIndex, reversed: Math.random() < 0.3 };
+        });
+
+        // 22장을 부채꼴로 펼치되, 카드 간 수평 간격을 넉넉히 벌려 배치
+        const mid = (total - 1) / 2;
+        const STEP_X = 14;     // 카드 간 수평 간격(px) — 클수록 더 벌어짐
+        const STEP_ANGLE = 3;  // 카드당 회전 각도(도)
+        const ARC = 0.42;      // 아치 곡률
+        for (let i = 0; i < total; i++) {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'tarot-card-back';
+            card.setAttribute('aria-label', `${i + 1}번째 카드 뽑기`);
+            card.innerHTML = CARD_BACK_MARK;
+            const t = i - mid;
+            const x = t * STEP_X;
+            const y = (t * t) * ARC;
+            const angle = t * STEP_ANGLE;
+            card.style.transform = `translateX(${x}px) translateY(${y}px) rotate(${angle}deg)`;
+            card.style.zIndex = i;
+            card.onclick = () => drawCard(card, i);
+            deckContainer.appendChild(card);
+        }
+    }
+
+    async function drawCard(cardElement, position) {
+        if (state.isProcessing) return;
+        if (!window.TAROT_DECK || !window.TAROT_DECK.cards) {
+            alert('카드 데이터를 불러오지 못했습니다. tarot-data.js 파일이 같은 폴더에 있는지 확인해 주세요.');
+            return;
+        }
+        state.isProcessing = true;
+
+        const cards = window.TAROT_DECK.cards;
+        const pick = (state.spread && state.spread[position]) || { cardIndex: Math.floor(Math.random() * cards.length), reversed: Math.random() < 0.3 };
+        state.selectedCard = cards[pick.cardIndex];
+        state.isReversed = pick.reversed;
+
+        // 선택한 카드를 위로 띄우고 정면으로 세우는 연출
+        cardElement.classList.add('picked');
+        cardElement.style.zIndex = 999;
+        cardElement.style.transform = 'translateY(-36px) rotate(0deg) scale(1.12)';
+
+        // 1. 카드 클릭 애니메이션 대기 (0.4초)
+        await delay(400);
+
+        // 2. 로딩 화면 표시
+        state.currentView = 'stepLoading';
+        switchView('stepLoading');
+
+        // 로딩 중 결과 이미지 미리 불러오기 (결과 화면 빈 카드 방지)
+        try { new Image().src = state.selectedCard.img; } catch (e) {}
+
+        // 3. 맞춤 해석 생성 로딩 대기 (1.2초)
+        await delay(1200);
+
+        // 4. 결과 출력
+        showResults();
+        state.isProcessing = false;
+    }
+
+    function showResults() {
+        const card = state.selectedCard;
+        const cardImgEl = document.getElementById('resultCardImg');
+        const imgWrapper = document.getElementById('cardImageWrapper');
+        const fb = document.getElementById('cardFallback');
+
+        // 폴백 초기화 + 이미지 표시
+        fb.style.display = 'none';
+        cardImgEl.style.display = 'block';
+        cardImgEl.src = card.img;
+        document.getElementById('resultCardName').innerText = card.name;
+
+        if (state.isReversed) {
+            imgWrapper.classList.add('reversed');
+            document.getElementById('resultCardOrient').innerText = "(역방향)";
+        } else {
+            imgWrapper.classList.remove('reversed');
+            document.getElementById('resultCardOrient').innerText = "(정방향)";
+        }
+
+        // 대체텍스트를 카드명 + 방향으로 동적 설정
+        cardImgEl.alt = `타로 카드 ${card.name} ${state.isReversed ? '역방향' : '정방향'}`;
+
+        // 실제 카드 해석 생성 (정/역방향 + 연령대 + 고민 분야 반영)
+        const reading = composeReading(card, state.isReversed, state.ageGroup, state.category);
+        document.getElementById('resultToneBadge').innerText = reading.badge;
+        document.getElementById('resultText').innerText = reading.text;
+
+        navStack.push('step4');
+        history.pushState({ view: 'step4' }, '');
+        setView('step4');
+    }
+
+    function restart() {
+        // '다시 리딩하기' → 첫 화면이 아니라 고민(카테고리) 선택 화면으로 이동. 연령대 프로필은 유지.
+        state.category = null;
+        state.selectedCard = null;
+        state.isProcessing = false;
+        document.querySelectorAll('#step2 .chip-btn').forEach(btn => btn.classList.remove('selected'));
+        document.getElementById('btnStep2').disabled = true;
+        navStack = ['step1', 'step2'];
+        history.pushState({ view: 'step2' }, '');
+        setView('step2');
+    }
+</script>
+
+</body>
+</html>
